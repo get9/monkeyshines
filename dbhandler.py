@@ -7,20 +7,22 @@ class dbhandler:
 
         # If file exists, then it will make a new connection, otherwise sqlite3
         # will make a new file.
-        if os.path.isfile(filename):
+        if not os.path.isfile(filename):
             self.create_db()
 
     # Count the number of URLs seen thus far.
     def get_url_count(self):
         get_urlcount = "SELECT COUNT(*) FROM url_list"
-        with self.getdbconn().cursor() as curs:
+        with self.getdbconn() as con:
+            curs = con.cursor()
             curs.execute(get_urlcount)
             return curs.fetchone()[0]
 
     # Insert URL into the db.
     def add_url(urlo):
         insert_url = "INSERT INTO url_list (url, hash) VALUES (?, ?)"
-        with self.getdbconn().cursor() as curs:
+        with self.getdbconn() as con:
+            curs = con.cursor()
             curs.execute(insert_url, (urlo.url, urlo.xhash))
 
     # Runs the create statements
@@ -42,12 +44,15 @@ class dbhandler:
             """
         create_link_structure = """
             CREATE TABLE link_structure (
+                inlink INTEGER,
+                outlink INTEGER,
                 FOREIGN KEY(inlink) REFERENCES url_list(id),
                 FOREIGN KEY(outlink) REFERENCES url_list(id)
             )
             """
         # Create the tables
-        with self.getdbconn().cursor() as curs:
+        with self.getdbconn() as con:
+            curs = con.cursor()
             curs.execute(create_blacklist)
             curs.execute(create_urls)
             curs.execute(create_link_structure)
@@ -59,12 +64,23 @@ class dbhandler:
     # Checks if link is already in db
     def has_url(self, url):
         check_db = "SELECT * FROM url_list WHERE hash = ?"
-        with self.getdbconn().cursor() as curs:
+        with self.getdbconn() as con:
+            curs = con.cursor()
             curs.execute(check_db, url.xhash)
             return curs.fetchone() is None
 
     # Add a url to the blacklist.
     def add_to_blacklist(self, url):
-        add_to_list = "INSERT INTO blacklist (domain) VALUES (?)"
-        with self.getdbconn().cursor() as curs:
-            curs.execute(add_to_list, url)
+        if self.not_in_blacklist(url):
+            add_to_list = "INSERT INTO blacklist (domain) VALUES (?)"
+            with self.getdbconn() as con:
+                curs = con.cursor()
+                curs.execute(add_to_list, [url])
+
+    # Check if the url is in the blacklist.
+    def not_in_blacklist(self, url):
+        in_blacklist = "SELECT * FROM blacklist WHERE domain = ?"
+        with self.getdbconn() as con:
+            curs = con.cursor()
+            curs.execute(in_blacklist, [url])
+            return curs.fetchone() is None

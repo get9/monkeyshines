@@ -1,5 +1,8 @@
 import xxhash
 
+def get_hash(url):
+    return xxhash.xxh64(url).hexdigest()
+
 class URLObj:
     def __init__(self, url):
         self.url = url
@@ -12,6 +15,3 @@ class URLObj:
         # LinkCollector module.
         self.to_enqueue = True
         self.is_domain = False
-
-    def get_hash(url):
-        return xxhash.xxh64(url).hexdigest()

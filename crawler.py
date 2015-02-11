@@ -2,6 +2,8 @@ from fetcher import fetch
 from robotsparser import RobotsParser
 from linkcollector import LinkCollector
 from workqueue import WorkQueue
+from dbhandler import dbhandler
+from urlobj import URLObj
 
 class Crawler:
     def __init__(self, dbfname):
@@ -14,22 +16,24 @@ class Crawler:
     def crawl(self, baseurl):
         # Need to parse robots.txt from baseurl.
         rp = RobotsParser(baseurl)
-        if not rp.robots.exists():
-            print("couldn't find robots.txt from www.uky.edu")
-        else:
+        if rp.exists():
             blacklinks = rp.parse()
             for u in blacklinks:
                 self.db.add_to_blacklist(u)
+        else:
+            print("couldn't find robots.txt from www.uky.edu")
 
         # Start crawl of baseurl.
-        resp = fetch(baseurl)
-        links = self.collector.parse_links(baseurl, resp.content)
+        base = URLObj(baseurl)
+        resp = fetch(base)
+        links = self.collector.parse_links(base, resp.content)
         for l in links:
             queue.enqueue(l)
 
         # Repeat until queue is empty (gonna take a looooooong time...)
         while not queue.empty():
-            resp = fetch(baseurl)
-            links = self.collector.parse_links(baseurl, resp.content)
+            newurl = queue.dequeue()
+            resp = fetch(newurl)
+            links = self.collector.parse_links(newurl, resp.content)
             for l in links:
                 queue.enqueue(l)

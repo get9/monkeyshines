@@ -1,9 +1,9 @@
-import multiprocessing.Queue
+from multiprocessing import Queue
 
 class WorkQueue:
     def __init__(self):
         # Specify maxsize when multithreading.
-        self.queue = multiprocessing.Queue()
+        self.queue = Queue()
 
     # Semantics:
     #     Puts 'urlo' into the queue. If there's no free space, it will block
