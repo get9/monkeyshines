@@ -10,4 +10,8 @@ def fetch(urlo, cookies=None, t=20):
         urlo.timedout = True
         urlo.status_code = None
         return None
+    except requests.exceptions.SSLError:
+        urlo.status_code = None
+        return None
+    urlo.status_code = resp.status_code
     return resp

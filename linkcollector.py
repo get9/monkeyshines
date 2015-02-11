@@ -2,12 +2,15 @@ from dbhandler import dbhandler
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlsplit, urlunsplit
 from urlobj import URLObj
+from blacklist import Blacklist
+import re
 
 # One copy of this class per thread, so doesn't need to be thread-safe.
 class LinkCollector:
     def __init__(self, dbhandle):
         self.dbhandle = dbhandle
         self.conn = dbhandle.getdbconn()
+        self.blacklist = Blacklist(dbhandle)
 
     # Main method that is called by the crawler object.
     def parse_links(self, fromurl, html):
@@ -21,8 +24,8 @@ class LinkCollector:
         bshtml = BeautifulSoup(html)
         all_links = []
         hreflinks = []
-        # Only gets href attrs
-        for l in bshtml.find_all("a"):
+        # Only gets href attrs from <a> with href of uky.edu
+        for l in bshtml.find_all("a", href=re.compile('.*uky\.edu.*')):
             hreflinks.append(l['href'])
         # Can implement more link getters as needed.
 
@@ -31,17 +34,28 @@ class LinkCollector:
         urls = []
         for link in all_links:
             urlo = URLObj(link)
-            splitted = urlsplit(urlo.url)
+            scheme, netloc, path, query, fragment = urlsplit(urlo.url)
+
+            # Skip empty URLs (however they got there...)
+            if all(o is None for o in (scheme, netloc, path, query, fragment)):
+                continue
+
+            # Skip URLs that are just fragments.
+            elif all(o is None for o in (scheme, netloc, path, query)):
+                continue
+
+            # Skip any domain that's not UKY.
+            elif not re.search('uky.edu', netloc):
+                continue
 
             # It's a relative link.
-            if splitted[1] is None:
-                splitted[1] = baseurl
+            elif scheme is None and netloc is None:
+                urlo.url = urljoin((scheme, baseurl, path, query, fragment))
 
             # It's probably a domain, so we need to parse the robots.txt.
-            elif splitted[2] == "" and splitted[3] == "" and splitted[4] == "":
+            elif path == "" and query == "" and fragment == "":
                 urlo.is_domain = True
 
-            urlo.url = urlunsplit(splitted)
             urls.append(urlo)
 
         return urls
@@ -49,18 +63,6 @@ class LinkCollector:
     # Filters links only, does not do anything else with them.
     def filter_links(self, links):
         # Keep adding stuff here to filter it out.
-        links = filter(self.f_not_in_blacklist, links)
-        links = filter(self.f_not_in_db, links)
+        links = filter(lambda x: x not in self.blacklist, links)
     
         return links
-    
-    # Return True if link is not on blacklist.
-    def f_not_in_blacklist(self, link):
-        for site in self.dbhandle.get_blacklist():
-            if site in link:
-                return False
-        return True
-
-    # Return True if not in db already.
-    def f_not_in_db(self, url):
-        return self.db.has_url(url)
