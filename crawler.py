@@ -46,9 +46,8 @@ class Crawler:
                 resp = fetch(base)
                 links = self.collector.parse_links(base, resp.content)
                 for l in links:
-                    if l not in self.urllist:
-                        self.urllist.append(l)
-                        self.queue.enqueue(l)
+                    self.urllist.append(l)
+                    self.queue.enqueue(l)
             except Exception as ex:
                 logging.debug("Encountered an exception", exc_info=True)
                 self.queue.dump()
@@ -80,9 +79,8 @@ class Crawler:
 
                 links = self.collector.parse_links(newurl, resp.content)
                 for l in links:
-                    if l not in self.urllist:
-                        self.urllist.append(l)
-                        self.queue.enqueue(l)
+                    self.urllist.append(l)
+                    self.queue.enqueue(l)
 
         except Exception as ex:
             logging.debug("Encountered an exception", exc_info=True)

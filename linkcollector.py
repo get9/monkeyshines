@@ -4,8 +4,11 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 from urlobj import URLObj
 from blacklist import Blacklist
 
+import os.path
 import re
 import logging
+
+SKIP_FILES = ['.pdf', '.png', '.gif', '.jpg', '.jpeg', '.wmv', '.mp4', '.mp3']
 
 # One copy of this class per thread, so doesn't need to be thread-safe.
 class LinkCollector:
@@ -13,6 +16,7 @@ class LinkCollector:
         self.dbhandle = dbhandle
         self.conn = dbhandle.getdbconn()
         self.blacklist = Blacklist(dbhandle)
+        self.urllist = URLList(dbhandle)
 
     # Main method that is called by the crawler object.
     def parse_links(self, fromurl, html):
@@ -36,6 +40,12 @@ class LinkCollector:
         all_links = all_links + hreflinks
         urls = []
         for link in all_links:
+            link = link.rstrip('/')
+
+            # Skip any links to PDF's, images, etc.
+            if os.path.splitext(link)[1] in SKIP_FILES:
+                continue
+
             urlo = URLObj(link)
             scheme, netloc, path, query, fragment = urlsplit(urlo.url)
 
@@ -71,5 +81,6 @@ class LinkCollector:
     def filter_links(self, links):
         # Keep adding stuff here to filter it out.
         links = filter(lambda x: x not in self.blacklist, links)
+        links = filter(lambda x: x not in self.urllist, links)
     
         return links
