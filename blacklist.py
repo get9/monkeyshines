@@ -1,3 +1,5 @@
+import logging
+
 # Specific class for blacklist handling. Broken out of dbhandler
 class Blacklist:
     def __init__(self, dbhandle):
@@ -6,11 +8,11 @@ class Blacklist:
 
     # Add to blacklist
     def append(self, site):
+        logging.info("Adding {} to blacklist".format(site))
         self.blacklist.append(site)
         with self.db.getdbconn() as con:
             curs = con.cursor()
             add_site = "INSERT INTO blacklist (domain) VALUES (?)"
-            print(site)
             curs.execute(add_site, (site,))
 
     # Check membership

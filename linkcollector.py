@@ -3,7 +3,9 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlsplit, urlunsplit
 from urlobj import URLObj
 from blacklist import Blacklist
+
 import re
+import logging
 
 # One copy of this class per thread, so doesn't need to be thread-safe.
 class LinkCollector:
@@ -25,6 +27,7 @@ class LinkCollector:
         all_links = []
         hreflinks = []
         # Only gets href attrs from <a> with href of uky.edu
+        logging.info("Finding links in page")
         for l in bshtml.find_all("a", href=re.compile('.*uky\.edu.*')):
             hreflinks.append(l['href'])
         # Can implement more link getters as needed.
@@ -38,19 +41,23 @@ class LinkCollector:
 
             # Skip empty URLs (however they got there...)
             if all(o is None for o in (scheme, netloc, path, query, fragment)):
+                logging.info("Skipping empty URL")
                 continue
 
             # Skip URLs that are just fragments.
             elif all(o is None for o in (scheme, netloc, path, query)):
+                logging.info("Skipping frag'd URL")
                 continue
 
             # Skip any domain that's not UKY.
             elif not re.search('uky.edu', netloc):
+                logging.info("Skipping non-uky domain {}".format(link))
                 continue
 
             # It's a relative link.
             elif scheme is None and netloc is None:
                 urlo.url = urljoin((scheme, baseurl, path, query, fragment))
+                logging.info("Canonicalizing URL: {} ---> {}".format(baseurl, urlo.url))
 
             # It's probably a domain, so we need to parse the robots.txt.
             elif path == "" and query == "" and fragment == "":

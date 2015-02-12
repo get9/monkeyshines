@@ -1,3 +1,5 @@
+import logging
+
 class URLList:
     def __init__(self, dbhandle):
         self.db = dbhandle

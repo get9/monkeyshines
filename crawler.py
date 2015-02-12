@@ -8,6 +8,7 @@ from blacklist import Blacklist
 from urllist import URLList
 
 import traceback
+import logging
 import os.path
 import sys
 
@@ -19,7 +20,7 @@ class Crawler:
 
         # Need to initialize workqueue if it was dumped previously.
         if os.path.isfile('queuedsites.txt'):
-            print("loading work queue")
+            logging.info('Loading work queue from cache')
             self.queue.load()
 
         self.collector = LinkCollector(self.db)
@@ -28,32 +29,53 @@ class Crawler:
 
     # Entry point for main crawl.
     def crawl(self, baseurl):
-        # Need to parse robots.txt from baseurl.
-        rp = RobotsParser(baseurl)
-        if rp.exists():
-            blacklinks = rp.parse()
-            for u in blacklinks:
-                self.blacklist.append(u)
-        else:
-            print("couldn't find robots.txt from www.uky.edu")
+        if not self.queue.loaded:
+            # Need to parse robots.txt from baseurl.
+            rp = RobotsParser(baseurl)
+            if rp.exists():
+                logging.info('Parsing {}/robots.txt'.format(baseurl))
+                blacklinks = rp.parse()
+                for u in blacklinks:
+                    self.blacklist.append(u)
+            else:
+                logging.warn("Couldn't find {}/robots.txt".format(baseurl))
+
+            # Load baseurl, run it.
+            try:
+                base = URLObj(baseurl)
+                resp = fetch(base)
+                links = self.collector.parse_links(base, resp.content)
+                for l in links:
+                    if l not in self.urllist:
+                        self.urllist.append(l)
+                        self.queue.enqueue(l)
+            except Exception as ex:
+                logging.debug("Encountered an exception", exc_info=True)
+                self.queue.dump()
+                sys.exit(1)
 
         # Start crawl of baseurl.
         try:
-            base = URLObj(baseurl)
-            resp = fetch(base)
-            links = self.collector.parse_links(base, resp.content)
-            for l in links:
-                if l not in self.urllist:
-                    self.urllist.append(l)
-                    self.queue.enqueue(l)
-
             # Repeat until queue is empty (gonna take a looooooong time...)
             while not self.queue.empty():
                 newurl = self.queue.dequeue()
+
+                # If newurl is a domain, then we need to check for the blacklist
+                if newurl.is_domain:
+                    logging.info("{} is likely a domain, getting robots.txt".format(newurl.url))
+                    rp = RobotsParser(newurl.url)
+                    if rp.exists():
+                        blacklinks = rp.parse()
+                        for u in blacklinks:
+                            self.blacklist.append(u)
+                    else:
+                        logging.warn("Couldn't find {}/robots.txt".format(newurl.url))
+
                 resp = fetch(newurl)
 
                 # Can be None if fetch times out
                 if resp is None:
+                    logging.warn("Could not fetch {}".format(newurl.url))
                     continue
 
                 links = self.collector.parse_links(newurl, resp.content)
@@ -61,7 +83,8 @@ class Crawler:
                     if l not in self.urllist:
                         self.urllist.append(l)
                         self.queue.enqueue(l)
+
         except Exception as ex:
-            traceback.print_exc()
+            logging.debug("Encountered an exception", exc_info=True)
             self.queue.dump()
             sys.exit(1)

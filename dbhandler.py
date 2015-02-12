@@ -1,4 +1,5 @@
 import sqlite3
+import logging
 import os.path
 
 class dbhandler:
@@ -12,7 +13,7 @@ class dbhandler:
 
     # Runs the create statements
     def create_db(self):
-        # XXX Eventually want to create a separate database.
+        logging.info("Creating database")
         create_blacklist = """
             CREATE TABLE blacklist (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
