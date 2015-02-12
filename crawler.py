@@ -7,8 +7,8 @@ from urlobj import URLObj
 from blacklist import Blacklist
 from urllist import URLList
 from multiprocessor_worker import process_url
-from multiprocessing import Pool
 
+import threading
 import traceback
 import logging
 import os.path
@@ -56,12 +56,20 @@ class Crawler:
                 sys.exit(1)
 
         # Start crawl of baseurl.
+        thread_list = []
         try:
-            pool = Pool(processes=3)
-            pool.apply(process_url, (self.queue, self.db, self.urllist,
-                                     self.blacklist))
+            for i in range(4):
+                t = threading.Thread(target=process_url, args=(self.queue,
+                                     self.db, self.urllist, self.blacklist))
+                thread_list.append(t)
+
+            for thread in thread_list:
+                thread.start()
+
+            for thread in thread_list:
+                thread.join()
             
-        except Exception as ex:
+        except (KeyboardInterrupt, Exception):
             logging.debug("Encountered an exception", exc_info=True)
             self.queue.dump()
             sys.exit(1)

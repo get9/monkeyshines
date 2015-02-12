@@ -29,26 +29,23 @@ class LinkCollector:
         # Get the base URL from which the HTML came from.
         baseurl = urlsplit(fromurlo.url)
         bshtml = BeautifulSoup(html)
-        all_links = []
         hreflinks = []
         # Only gets href attrs from <a> with href of uky.edu
         logging.info("Finding links in page")
-        for l in bshtml.find_all("a", href=re.compile('.*uky\.edu.*')):
+        for l in bshtml.find_all("a", href=re.compile('^http://.*uky\.edu.*')):
             hreflinks.append(l['href'])
         # Can implement more link getters as needed.
 
-        # Add in netloc for relative paths if it's missing
-        all_links = all_links + hreflinks
         urls = []
-        for link in all_links:
+        for link in hreflinks:
+            is_domain = False
             link = link.rstrip('/')
 
             # Skip any links to PDF's, images, etc.
             if os.path.splitext(link)[1] in SKIP_FILES:
                 continue
 
-            urlo = URLObj(link)
-            scheme, netloc, path, query, fragment = urlsplit(urlo.url)
+            scheme, netloc, path, query, fragment = urlsplit(link)
 
             # Skip empty URLs (however they got there...)
             if all(o is None for o in (scheme, netloc, path, query, fragment)):
@@ -60,19 +57,21 @@ class LinkCollector:
                 logging.info("Skipping frag'd URL")
                 continue
 
-            # Skip any domain that's not UKY.
-            elif not re.search('uky.edu', netloc):
-                logging.info("Skipping non-uky domain {}".format(link))
-                continue
-
             # It's a relative link.
             elif scheme is None and netloc is None:
-                urlo.url = urljoin((scheme, baseurl, path, query, fragment))
+                urlo = URLObj(urljoin(('http://', baseurl, path, query, fragment)))
                 logging.info("Canonicalizing URL: {} ---> {}".format(baseurl, urlo.url))
+
+            # It's not a uky domain
+            elif not re.match('.*uky.edu', netloc):
+                continue
 
             # It's probably a domain, so we need to parse the robots.txt.
             elif path == "" and query == "" and fragment == "":
-                urlo.is_domain = True
+                is_domain = True
+
+            urlo = URLObj(link)
+            urlo.is_domain = is_domain
 
             urls.append(urlo)
 

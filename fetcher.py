@@ -3,7 +3,7 @@ import requests
 import logging
 import re
 
-def fetch(urlo, cookies=None, t=20):
+def fetch(urlo, cookies=None, t=5):
     if not re.match('https?:\/\/', urlo.url):
         if re.match('\/\/', urlo.url):
             urlo.url = 'http:' + urlo.url
@@ -29,6 +29,10 @@ def fetch(urlo, cookies=None, t=20):
         return None
     except requests.exceptions.TooManyRedirects:
         logging.debug("Received TooManyRedirects exception", exc_info=True)
+        urlo.status_code = None
+        return None
+    except requests.exceptions.InvalidURL:
+        logging.debug("Received InvalidURL exception", exc_info=True)
         urlo.status_code = None
         return None
     urlo.status_code = resp.status_code
