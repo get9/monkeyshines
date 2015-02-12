@@ -6,6 +6,8 @@ from dbhandler import dbhandler
 from urlobj import URLObj
 from blacklist import Blacklist
 from urllist import URLList
+from multiprocessor_worker import process_url
+from multiprocessing import Pool
 
 import traceback
 import logging
@@ -55,33 +57,10 @@ class Crawler:
 
         # Start crawl of baseurl.
         try:
-            # Repeat until queue is empty (gonna take a looooooong time...)
-            while not self.queue.empty():
-                newurl = self.queue.dequeue()
-
-                # If newurl is a domain, then we need to check for the blacklist
-                if newurl.is_domain:
-                    logging.info("{} is likely a domain, getting robots.txt".format(newurl.url))
-                    rp = RobotsParser(newurl.url)
-                    if rp.exists():
-                        blacklinks = rp.parse()
-                        for u in blacklinks:
-                            self.blacklist.append(u)
-                    else:
-                        logging.warn("Couldn't find {}/robots.txt".format(newurl.url))
-
-                resp = fetch(newurl)
-
-                # Can be None if fetch times out
-                if resp is None:
-                    logging.warn("Could not fetch {}".format(newurl.url))
-                    continue
-
-                links = self.collector.parse_links(newurl, resp.content)
-                for l in links:
-                    self.urllist.append(l)
-                    self.queue.enqueue(l)
-
+            pool = Pool(processes=3)
+            pool.apply(process_url, (self.queue, self.db, self.urllist,
+                                     self.blacklist))
+            
         except Exception as ex:
             logging.debug("Encountered an exception", exc_info=True)
             self.queue.dump()

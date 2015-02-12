@@ -1,7 +1,9 @@
+import logging
+
 from linkcollector import LinkCollector
 from robotsparser import RobotsParser
 
-def worker_thread(q, dbhandle, urls, blacklist):
+def process_url(q, dbhandle, urls, blacklist):
     newurl = q.dequeue()
 
     # If domain, then need to add blacklist

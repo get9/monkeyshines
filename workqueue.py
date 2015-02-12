@@ -1,4 +1,4 @@
-from multiprocessing import Queue
+from multiprocessing import Manager
 from urlobj import URLObj
 
 import logging
@@ -6,7 +6,7 @@ import logging
 class WorkQueue():
     def __init__(self):
         # Specify maxsize when multithreading.
-        self.queue = Queue()
+        self.queue = Manager().Queue()
         self.loaded = False
 
     # Semantics:

@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlsplit, urlunsplit
 from urlobj import URLObj
 from blacklist import Blacklist
+from urllist import URLList
 
 import os.path
 import re
