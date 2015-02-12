@@ -6,7 +6,7 @@ from crawler import Crawler
 
 def configure_logger():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                        level=logging.DEBUG, filename='crawl.log')
+                        level=logging.INFO, filename='crawl.log')
     logging.info('Configured logger')
     logging.getLogger('requests').setLevel(logging.WARNING)
 

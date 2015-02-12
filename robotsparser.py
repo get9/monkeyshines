@@ -16,9 +16,9 @@ class RobotsParser:
 
     # Actually parse the file.
     def parse(self):
-        logging.info("Parsing robots.txt")
         blackpaths = []
         resp = fetch(URLObj(join(self.domain, 'robots.txt')))
+        logging.info("Parsing robots.txt for {}".format(join(self.domain, 'robots.txt')))
         if resp is not None:
             for line in resp.text.split('\n'):
                 line = line.strip()

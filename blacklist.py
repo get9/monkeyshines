@@ -15,7 +15,7 @@ class Blacklist:
         with threading.Lock():
             self.blist.add(url.rstrip('/'))
 
-        logging.info("Adding {} to blacklist".format(url))
+        logging.debug("Adding {} to blacklist".format(url))
         with self.db.getdbconn() as con:
             curs = con.cursor()
             add_site = "INSERT INTO blacklist (domain) VALUES (?)"

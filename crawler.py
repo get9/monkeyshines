@@ -1,6 +1,7 @@
 from fetcher import fetch
 from robotsparser import RobotsParser
-from linkcollector import LinkCollector
+from linkextractor import extract
+from filterengine import filter_links
 from workqueue import WorkQueue
 from dbhandler import dbhandler
 from urlobj import URLObj
@@ -25,7 +26,6 @@ class Crawler:
             logging.info('Loading work queue from cache')
             self.queue.load()
 
-        self.collector = LinkCollector(self.db)
         self.blacklist = Blacklist(self.db)
         self.urllist = URLList(self.db)
 
@@ -46,8 +46,10 @@ class Crawler:
             try:
                 base = URLObj(baseurl)
                 resp = fetch(base)
-                links = self.collector.parse_links(base, resp.content)
-                for l in links:
+                logging.debug("Extracting links")
+                page_urls = extract(resp.content, base)
+                logging.debug("Filtering links")
+                for l in filter_links(page_urls, self.urllist, self.blacklist):
                     self.urllist.append(l)
                     self.queue.enqueue(l)
             except Exception as ex:
@@ -58,6 +60,7 @@ class Crawler:
         # Start crawl of baseurl.
         thread_list = []
         try:
+            logging.debug("Launching threads")
             for i in range(4):
                 t = threading.Thread(target=process_url, args=(self.queue,
                                      self.db, self.urllist, self.blacklist))
@@ -68,6 +71,7 @@ class Crawler:
 
             for thread in thread_list:
                 thread.join()
+            logging.debug("Threads joined")
             
         except (KeyboardInterrupt, Exception):
             logging.debug("Encountered an exception", exc_info=True)

@@ -34,8 +34,7 @@ class WorkQueue():
         with open('queuedsites.txt', 'w') as f:
             while not self.empty():
                 u = self.dequeue()
-                f.write('{}<>{}<>{}<>{}<>{}<>{}\n'.format(u.url, u.xhash, u.status_code,
-                    u.timedout, u.to_enqueue, u.is_domain))
+                f.write('{}<>{}<>{}<>{}<>{}<>{}\n'.format(u.url.strip(), u.xhash, u.status_code, u.timedout, u.to_enqueue, u.is_domain))
 
     # Only called at the beginning; assumes we were interrupted in the middle of a run.
     def load(self):
@@ -57,4 +56,4 @@ class WorkQueue():
                 u.to_enqueue = bool(line[4])
                 u.is_domain = bool(line[5])
                 self.enqueue(u)
-        self.queue.loaded = True
+        self.loaded = True
